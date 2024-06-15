@@ -1,0 +1,11 @@
+[package]
+name = "scramblor"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+aes-gcm = "0.10.3"
+clap = { version = "4.5.6", features = ["derive"] }
+rand = "0.8.5"
