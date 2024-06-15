@@ -1,5 +1,7 @@
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use base64::Engine as _;
 use clap::{Args, Parser, Subcommand};
-use std::fs::DirEntry;
+use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 use std::process;
 
@@ -35,14 +37,18 @@ fn main() {
             if let Err(e) = validate_args(args) {
                 exit_with_error(&e);
             };
-            println!("Encrypting with password {}", args.password);
-            if let Err(e) = lib::file_encryptor::encrypt_file(&args.file_path, &args.password) {
+
+            let password = hash_string_to_32_chars(&args.password);
+
+            println!("Encrypting with password {}", password);
+            if let Err(e) = lib::file_encryptor::encrypt_file(&args.file_path, &password) {
                 exit_with_error(&e.to_string());
             }
         }
         Commands::Decrypt(args) => {
-            println!("Decrypting with password {}", args.password);
-            if let Err(e) = lib::file_encryptor::decrypt_file(&args.file_path, &args.password) {
+            let password = hash_string_to_32_chars(&args.password);
+            println!("Decrypting with password {}", password);
+            if let Err(e) = lib::file_encryptor::decrypt_file(&args.file_path, &password) {
                 exit_with_error(&e.to_string());
             }
         }
@@ -55,6 +61,18 @@ fn validate_args(args: &EncryptArgs) -> Result<(), String> {
     } else {
         Err(String::from("File does not exist."))
     }
+}
+
+fn hash_string_to_32_chars(input: &str) -> String {
+    // Hash input string.
+    let mut hasher = Sha256::new();
+    hasher.update(input);
+    let result = hasher.finalize();
+
+    // Convert to base64.
+    let mut str_buffer = String::new();
+    URL_SAFE_NO_PAD.encode_string(result, &mut str_buffer);
+    str_buffer.chars().take(32).collect()
 }
 
 fn exit_with_error(error: &str) {
