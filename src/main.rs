@@ -5,7 +5,8 @@ use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 use std::process;
 
-mod lib;
+mod aes_encryptor;
+mod file_encryptor;
 
 #[derive(Parser)]
 #[clap(version, about, long_about = None)]
@@ -39,16 +40,13 @@ fn main() {
             };
 
             let password = hash_string_to_32_chars(&args.password);
-
-            println!("Encrypting with password {}", password);
-            if let Err(e) = lib::file_encryptor::encrypt_file(&args.file_path, &password) {
+            if let Err(e) = file_encryptor::encrypt_file(&args.file_path, &password) {
                 exit_with_error(&e.to_string());
             }
         }
         Commands::Decrypt(args) => {
             let password = hash_string_to_32_chars(&args.password);
-            println!("Decrypting with password {}", password);
-            if let Err(e) = lib::file_encryptor::decrypt_file(&args.file_path, &password) {
+            if let Err(e) = file_encryptor::decrypt_file(&args.file_path, &password) {
                 exit_with_error(&e.to_string());
             }
         }
@@ -79,3 +77,5 @@ fn exit_with_error(error: &str) {
     eprintln!("Application error: {}", error);
     process::exit(1);
 }
+
+pub mod encryption;

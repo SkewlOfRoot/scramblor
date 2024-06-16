@@ -60,16 +60,16 @@ impl EncryptedBytes {
     }
 }
 
-#[derive(Debug)]
-pub struct DecryptedBytes {
-    pub bytes: Vec<u8>,
-}
+// #[derive(Debug)]
+// pub struct DecryptedBytes {
+//     pub bytes: Vec<u8>,
+// }
 
-impl DecryptedBytes {
-    fn new(bytes: Vec<u8>) -> Self {
-        Self { bytes }
-    }
-}
+// impl DecryptedBytes {
+//     fn new(bytes: Vec<u8>) -> Self {
+//         Self { bytes }
+//     }
+// }
 
 #[allow(clippy::type_complexity)]
 struct Cipher {
