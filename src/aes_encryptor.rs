@@ -60,17 +60,6 @@ impl EncryptedBytes {
     }
 }
 
-// #[derive(Debug)]
-// pub struct DecryptedBytes {
-//     pub bytes: Vec<u8>,
-// }
-
-// impl DecryptedBytes {
-//     fn new(bytes: Vec<u8>) -> Self {
-//         Self { bytes }
-//     }
-// }
-
 #[allow(clippy::type_complexity)]
 struct Cipher {
     inner: AesGcm<Aes256, UInt<UInt<UInt<UInt<UTerm, B1>, B1>, B0>, B0>>,

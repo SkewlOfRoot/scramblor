@@ -77,5 +77,3 @@ fn exit_with_error(error: &str) {
     eprintln!("Application error: {}", error);
     process::exit(1);
 }
-
-pub mod encryption;

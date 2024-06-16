@@ -59,6 +59,7 @@ fn unique_file_name(decrypted_file_path: PathBuf, orig_file_ext: &String) -> Str
     loop {
         let mut new_file_name = file_stem.to_os_string();
         if counter > 0 {
+            new_file_name.push(".");
             new_file_name.push(counter.to_string());
         }
         new_file_name.push(".");
