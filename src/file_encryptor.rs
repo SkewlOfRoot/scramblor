@@ -14,7 +14,12 @@ pub fn encrypt_file(file_path: &Path, password: &str) -> anyhow::Result<Encrypti
         return Err(anyhow::anyhow!("File extension is too long."));
     }
 
+    // First byte will store the length of the original file extension
+    // followed by the extension itself and then the file content.
+    // E.g.: <extension length><extension><file content>
     let mut byte_data: Vec<u8> = Vec::new();
+    let extension_length = extension.len() as u8;
+    byte_data.push(extension_length);
     byte_data.extend_from_slice(extension.as_bytes());
     byte_data.extend_from_slice(&file_content);
 
@@ -25,12 +30,13 @@ pub fn encrypt_file(file_path: &Path, password: &str) -> anyhow::Result<Encrypti
 
     let mut new_file_path: PathBuf = PathBuf::from(file_path);
     new_file_path.set_extension(FILE_EXTENSION);
+    let new_file_path = unique_file_name(new_file_path)?;
 
     let mut file = File::create_new(&new_file_path)?;
     file.write_all(&result.bytes)?;
 
     Ok(EncryptionResult::new(
-        format!("File encrypted successfully: {}", new_file_path.display()).as_str(),
+        format!("File encrypted successfully: {}", new_file_path).as_str(),
     ))
 }
 
@@ -39,11 +45,18 @@ pub fn decrypt_file(file_path: &Path, password: &str) -> anyhow::Result<Encrypti
 
     let result: Vec<u8> = aes_encryptor::decrypt(file_content, password)?;
 
-    let (orig_file_ext, decrypted_data) = result.split_at(3);
-    let orig_file_ext = String::from_utf8(orig_file_ext.to_vec()).unwrap();
+    // First byte is the length of the original file extension.
+    let (extension_length, rest) = result
+        .split_first()
+        .ok_or_else(|| anyhow::anyhow!("Invalid encrypted file format: no data found."))?;
 
-    let decrypted_file_path: PathBuf = PathBuf::from(file_path);
-    let new_file_name = unique_file_name(decrypted_file_path, &orig_file_ext);
+    // Get the original file extension and the decrypted data.
+    let (orig_file_ext, decrypted_data) = rest.split_at(*extension_length as usize);
+    let extension = String::from_utf8(orig_file_ext.to_vec()).unwrap();
+
+    let mut decrypted_file_path: PathBuf = PathBuf::from(file_path);
+    decrypted_file_path.set_extension(&extension);
+    let new_file_name = unique_file_name(decrypted_file_path)?;
 
     let mut file = File::create_new(&new_file_name)?;
     file.write_all(decrypted_data)?;
@@ -53,26 +66,40 @@ pub fn decrypt_file(file_path: &Path, password: &str) -> anyhow::Result<Encrypti
     ))
 }
 
-fn unique_file_name(decrypted_file_path: PathBuf, orig_file_ext: &String) -> String {
-    let file_stem = decrypted_file_path.file_stem().unwrap();
-    let mut decrypted_file_path = decrypted_file_path.clone();
+fn unique_file_name(proposed_file_path: PathBuf) -> anyhow::Result<String> {
+    let file_stem = proposed_file_path.file_stem().ok_or_else(|| {
+        anyhow::anyhow!(
+            "Failed to get file stem from proposed file path: {}",
+            proposed_file_path.display()
+        )
+    })?;
+    let extension = proposed_file_path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("");
+
+    let mut proposed_file_path = proposed_file_path.clone();
     let mut counter: u8 = 0;
+
     loop {
-        let mut new_file_name = file_stem.to_os_string();
+        let mut new_stem = file_stem.to_os_string();
+
         if counter > 0 {
-            new_file_name.push(".");
-            new_file_name.push(counter.to_string());
+            new_stem.push(".");
+            new_stem.push(counter.to_string());
         }
-        new_file_name.push(".");
-        new_file_name.push(orig_file_ext);
-        decrypted_file_path.set_file_name(new_file_name);
-        if !decrypted_file_path.exists() {
+
+        new_stem.push(".");
+        new_stem.push(extension);
+        proposed_file_path.set_file_name(new_stem);
+
+        if !proposed_file_path.exists() {
             break;
         }
         counter += 1;
     }
 
-    String::from(decrypted_file_path.to_str().unwrap())
+    Ok(proposed_file_path.to_string_lossy().to_string())
 }
 
 fn read_bytes_from_file(file_path: &Path) -> anyhow::Result<Vec<u8>> {
