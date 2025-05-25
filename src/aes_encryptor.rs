@@ -9,14 +9,16 @@ use sha2::digest::{
     typenum::{UInt, UTerm},
 };
 
-pub fn encrypt(bytes: Vec<u8>, password: &str) -> Result<EncryptedBytes, aes_gcm::Error> {
+pub fn encrypt(bytes: Vec<u8>, password: &str) -> anyhow::Result<EncryptedBytes> {
     let cipher = generate_cipher(password);
 
     let mut nonce_bytes = [0u8; 12];
     OsRng.fill_bytes(&mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
 
-    let ciphertext = cipher.inner.encrypt(nonce, bytes.as_ref())?;
+    let ciphertext = cipher.inner.encrypt(nonce, bytes.as_ref()).map_err(|e| {
+        anyhow::anyhow!("Failed to encrypt data with the provided password: {:?}", e)
+    })?;
 
     Ok(EncryptedBytes::new(ciphertext, nonce_bytes))
 }
@@ -28,7 +30,7 @@ fn generate_cipher(password: &str) -> Cipher {
     Cipher { inner: cipher }
 }
 
-pub fn decrypt(encrypted_bytes: Vec<u8>, password: &str) -> Result<Vec<u8>, aes_gcm::Error> {
+pub fn decrypt(encrypted_bytes: Vec<u8>, password: &str) -> anyhow::Result<Vec<u8>> {
     let (nonce_bytes, ciphertext) = encrypted_bytes.split_at(12);
     let nonce = Nonce::from_slice(nonce_bytes);
 
@@ -36,10 +38,7 @@ pub fn decrypt(encrypted_bytes: Vec<u8>, password: &str) -> Result<Vec<u8>, aes_
 
     match cipher.inner.decrypt(nonce, ciphertext) {
         Ok(decrypted_plaintext) => Ok(decrypted_plaintext),
-        Err(e) => {
-            eprintln!("Faild to decrypt data: {:?}", e);
-            Err(e)
-        }
+        Err(e) => Err(anyhow::anyhow!("Failed to decrypt data: {:?}", e)),
     }
 }
 

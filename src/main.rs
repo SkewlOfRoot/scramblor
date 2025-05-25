@@ -26,7 +26,7 @@ enum Commands {
 
 #[derive(Args)]
 struct EncryptArgs {
-    file_path: PathBuf,
+    path: PathBuf,
     password: String,
 }
 
@@ -40,24 +40,26 @@ fn main() {
             };
 
             let password = hash_string_to_32_chars(&args.password);
-            if let Err(e) = file_encryptor::encrypt_file(&args.file_path, &password) {
-                exit_with_error(&e.to_string());
+            match file_encryptor::encrypt_file(&args.path, &password) {
+                Ok(result) => println!("{}", result.message),
+                Err(e) => exit_with_error(&e.to_string()),
             }
         }
         Commands::Decrypt(args) => {
             let password = hash_string_to_32_chars(&args.password);
-            if let Err(e) = file_encryptor::decrypt_file(&args.file_path, &password) {
-                exit_with_error(&e.to_string());
+            match file_encryptor::decrypt_file(&args.path, &password) {
+                Ok(result) => println!("{}", result.message),
+                Err(e) => exit_with_error(&e.to_string()),
             }
         }
     }
 }
 
 fn validate_args(args: &EncryptArgs) -> Result<(), String> {
-    if args.file_path.exists() {
+    if args.path.exists() {
         Ok(())
     } else {
-        Err(String::from("File does not exist."))
+        Err("Path does not exist.".to_string())
     }
 }
 
@@ -74,6 +76,6 @@ fn hash_string_to_32_chars(input: &str) -> String {
 }
 
 fn exit_with_error(error: &str) {
-    eprintln!("Application error: {}", error);
+    eprintln!("ERROR: {}", error);
     process::exit(1);
 }
