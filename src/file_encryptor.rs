@@ -18,7 +18,7 @@ pub fn encrypt_file(file_path: &Path, password: &str) -> anyhow::Result<Encrypti
     // followed by the extension itself and then the file content.
     // E.g.: <extension length><extension><file content>
     let mut byte_data: Vec<u8> = Vec::new();
-    let extension_length = extension.len() as u8;
+    let extension_length = u8::try_from(extension.len())?;
     byte_data.push(extension_length);
     byte_data.extend_from_slice(extension.as_bytes());
     byte_data.extend_from_slice(&file_content);
@@ -36,7 +36,7 @@ pub fn encrypt_file(file_path: &Path, password: &str) -> anyhow::Result<Encrypti
     file.write_all(&result.bytes)?;
 
     Ok(EncryptionResult::new(
-        format!("File encrypted successfully: {}", new_file_path).as_str(),
+        format!("File encrypted successfully: {}", new_file_path.display()).as_str(),
     ))
 }
 
@@ -52,7 +52,7 @@ pub fn decrypt_file(file_path: &Path, password: &str) -> anyhow::Result<Encrypti
 
     // Get the original file extension and the decrypted data.
     let (orig_file_ext, decrypted_data) = rest.split_at(*extension_length as usize);
-    let extension = String::from_utf8(orig_file_ext.to_vec()).unwrap();
+    let extension = String::from_utf8(orig_file_ext.to_vec())?;
 
     let mut decrypted_file_path: PathBuf = PathBuf::from(file_path);
     decrypted_file_path.set_extension(&extension);
@@ -62,11 +62,11 @@ pub fn decrypt_file(file_path: &Path, password: &str) -> anyhow::Result<Encrypti
     file.write_all(decrypted_data)?;
 
     Ok(EncryptionResult::new(
-        format!("File decrypted successfully: {}", new_file_name).as_str(),
+        format!("File decrypted successfully: {}", new_file_name.display()).as_str(),
     ))
 }
 
-fn unique_file_name(proposed_file_path: PathBuf) -> anyhow::Result<String> {
+fn unique_file_name(proposed_file_path: PathBuf) -> anyhow::Result<PathBuf> {
     let file_stem = proposed_file_path.file_stem().ok_or_else(|| {
         anyhow::anyhow!(
             "Failed to get file stem from proposed file path: {}",
@@ -82,16 +82,19 @@ fn unique_file_name(proposed_file_path: PathBuf) -> anyhow::Result<String> {
     let mut counter: u8 = 0;
 
     loop {
-        let mut new_stem = file_stem.to_os_string();
+        let mut new_file_name = file_stem.to_os_string();
 
         if counter > 0 {
-            new_stem.push(".");
-            new_stem.push(counter.to_string());
+            new_file_name.push(".");
+            new_file_name.push(counter.to_string());
         }
 
-        new_stem.push(".");
-        new_stem.push(extension);
-        proposed_file_path.set_file_name(new_stem);
+        if !extension.is_empty() {
+            new_file_name.push(".");
+            new_file_name.push(extension);
+        }
+
+        proposed_file_path.set_file_name(new_file_name);
 
         if !proposed_file_path.exists() {
             break;
@@ -99,7 +102,7 @@ fn unique_file_name(proposed_file_path: PathBuf) -> anyhow::Result<String> {
         counter += 1;
     }
 
-    Ok(proposed_file_path.to_string_lossy().to_string())
+    Ok(proposed_file_path)
 }
 
 fn read_bytes_from_file(file_path: &Path) -> anyhow::Result<Vec<u8>> {

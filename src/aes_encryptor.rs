@@ -50,8 +50,8 @@ pub struct EncryptedBytes {
 impl EncryptedBytes {
     fn new(bytes: Vec<u8>, nonce: [u8; 12]) -> Self {
         let mut encrypted_data: Vec<u8> = Vec::new();
-        encrypted_data.extend_from_slice(&nonce);
-        encrypted_data.extend_from_slice(&bytes);
+        encrypted_data.extend(nonce);
+        encrypted_data.extend(bytes);
 
         Self {
             bytes: encrypted_data,
