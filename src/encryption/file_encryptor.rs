@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-use crate::aes_encryptor::{self, EncryptedBytes};
+use super::aes_encryptor::{self, EncryptedBytes};
 
 const FILE_EXTENSION: &str = "scr";
 

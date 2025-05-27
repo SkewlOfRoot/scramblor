@@ -5,8 +5,7 @@ use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 use std::process;
 
-mod aes_encryptor;
-mod file_encryptor;
+mod encryption;
 
 #[derive(Parser)]
 #[clap(version, about, long_about = None)]
@@ -40,14 +39,14 @@ fn main() {
             };
 
             let password = hash_string_to_32_chars(&args.password);
-            match file_encryptor::encrypt_file(&args.path, &password) {
+            match encryption::encrypt_file(&args.path, &password) {
                 Ok(result) => println!("{}", result.message),
                 Err(e) => exit_with_error(&e.to_string()),
             }
         }
         Commands::Decrypt(args) => {
             let password = hash_string_to_32_chars(&args.password);
-            match file_encryptor::decrypt_file(&args.path, &password) {
+            match encryption::decrypt_file(&args.path, &password) {
                 Ok(result) => println!("{}", result.message),
                 Err(e) => exit_with_error(&e.to_string()),
             }
